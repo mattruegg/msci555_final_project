@@ -1,4 +1,4 @@
-Name,Monthly Listeners,Genre,Set Length (mins),Current Day,Current Stage,Normalized Rank
+Artist,MonthlyListeners,Genre,SetLength,Current Day,Current Stage,NR
 Ela Minus,150952,Dance/Electronic,40,Friday,Sonora,0.002286
 Yard Act,206135,Alternative/Indie,30,Saturday,Sonora,0.003122
 Mannequin Pussy,246489,Alternative/Indie,40,Saturday,Sonora,0.003733
@@ -48,7 +48,7 @@ Pheobe Bridgers,8815601,Alternative/Indie,60,Friday,Outdoor,0.133526
 Eyedress,9320271,Alternative/Indie,40,Sunday,Sonora,0.141170
 NIKI,9559591,R&B/Soul,45,Friday,Outdoor,0.144795
 Flume,10493004,Dance/Electronic,60,Saturday,Coachella,0.158933
-Stromae,10801371,Dance/Electronic,,Saturday,Outdoor,0.163603
+Stromae,10801371,Dance/Electronic,50,Saturday,Outdoor,0.163603
 Omar Apollo,10912552,R&B/Soul,45,Friday,Outdoor,0.165288
 Grupo Firme,13567887,Latin/Mexican,50,Friday,Coachella,0.205507
 Disclosure,13785480,Dance/Electronic,75,Saturday,Outdoor,0.208802
