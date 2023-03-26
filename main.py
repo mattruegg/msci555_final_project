@@ -1,7 +1,9 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from math import floor
 
+pd.options.mode.chained_assignment = None
 
 if __name__ == '__main__':
     artist_data = pd.read_csv('artist_data.csv')
@@ -15,9 +17,7 @@ if __name__ == '__main__':
     for x in range(num_artist):
         if x in artist_data['Artist']:
             y = artist_data.loc[x]
-            # z = [y["Artist"], y['SetLength'], y['NR'], y['SetLength'] * y['NR']]
-            # unscheduled_artists.append(z)
-            weighting.append(y['SetLength'] * y['NR'])
+            weighting.append(y['ML'] / (y['SetLength']+15))
 
     unscheduled_artists = artist_data
     unscheduled_artists['Weighting'] = weighting
@@ -31,58 +31,85 @@ if __name__ == '__main__':
     time2 = 0
     time3 = 0
 
-    for x in range(num_artist):
-        y = unscheduled_artists['Weighting'].idxmax()
-        if (time1 <= time2 and time1 <= time3) or artist_data['MonthlyListeners'].loc[y] > 20000000:
-            stage1.append([y, artist_data['Artist'].loc[y],
-                          artist_data['SetLength'].loc[y], time1])
-            time1 += artist_data['SetLength'].loc[y]
-        elif time2 <= time3:
-            stage2.append([y, artist_data['Artist'].loc[y],
-                          artist_data['SetLength'].loc[y], time2])
-            time2 += artist_data['SetLength'].loc[y]
-        else:
-            stage3.append([y, artist_data['Artist'].loc[y],
-                          artist_data['SetLength'].loc[y], time3])
-            time3 += artist_data['SetLength'].loc[y]
-        artist_data.drop(index=y, inplace=True)
+    # stage order: 1 2 3 4 5 6 7 8 9
+    w, h = 0, 9
+    stages = [[0 for x in range(w)] for y in range(h)]
+    genres = ['', '', '', '', '', '', '', '', '']
+    times = [0, 0, 0, 50, 50, 50, 50, 50, 50]
 
-    # print(time1, time2, time3)
-    # print("Stage 1")
-    # for x in stage1:
-    #     print (x)
-    # print("Stage 2")
-    # for x in stage2:
-    #     print (x)
-    # print("Stage 3")
-    # for x in stage3:
-    #     print (x)
+    #
+    # -------------------------- CREATE SCHEDULE --------------------------
+    #
+
+    for x in range(num_artist):
+        choose_artist = unscheduled_artists.copy(deep=True)
+
+        # choose a stage
+        next_stage = times.index(min(times))
+
+        # check for prev genre, reduce weight
+        for y in range(len(choose_artist)):
+            if y in artist_data['Artist']:
+                z = choose_artist.loc[y]
+                if z['Genre'] == genres[next_stage]:
+                    choose_artist['Weighting'].loc[y] = (
+                        z['ML'] / (z['SetLength'] + 5))
+
+        # check for genre duplicate, increase weight
+        for y in range(len(choose_artist)):
+            if y in artist_data['Artist']:
+                z = choose_artist.loc[y]
+                if (1 < (z['Genre'] == genres[next_stage % 3])
+                    + (z['Genre'] == (genres[next_stage % 3 + 3]))
+                        + (z['Genre'] == (genres[next_stage % 3 + 6]))):
+                    choose_artist['Weighting'].loc[y] /= 2
+
+        # choose max WCT
+        if next_stage >= 3:
+            for y in choose_artist['Weighting'].nlargest(11).index.tolist():
+                if choose_artist['ML'].loc[y] < 20000000:
+                    next_artist = y
+        else:
+            next_artist = choose_artist['Weighting'].idxmax()
+
+        # update stage vars
+        if (choose_artist['Genre'].loc[next_artist] == genres[next_stage]):
+            stages[next_stage].append([choose_artist['Artist'].loc[next_artist], 
+                                        times[next_stage] - 10,
+                                        choose_artist['SetLength'].loc[next_artist],
+                                        times[next_stage] + choose_artist['SetLength'].loc[next_artist] - 10,
+                                        choose_artist['Genre'].loc[next_artist]])
+            times[next_stage] += choose_artist['SetLength'].loc[next_artist] + 5
+        else:
+            stages[next_stage].append([choose_artist['Artist'].loc[next_artist], 
+                                        times[next_stage],
+                                        choose_artist['SetLength'].loc[next_artist],
+                                        times[next_stage] + choose_artist['SetLength'].loc[next_artist],
+                                        choose_artist['Genre'].loc[next_artist]])
+            times[next_stage] += choose_artist['SetLength'].loc[next_artist] + 15
+        genres[next_stage] = choose_artist['Genre'].loc[next_artist]
+
+        # remove from UA
+        unscheduled_artists.drop(index=next_artist, inplace=True)
+
+    print(times)
+    # for x in stages:
+    #     print(x)
+
+    #
+    # -------------------------- CREATE GRAPHS --------------------------
+    #
 
     fig, gnt = plt.subplots()
-    gnt.set_ylim(10, 40)
-    gnt.set_xlim(0, 1090)
+    gnt.set_ylim(0, 90)
+    gnt.set_xlim(0, 550)
 
-    gnt.set_yticks([15, 25, 35])
-    gnt.set_yticklabels(['3', '2', '1'])
+    gnt.set_yticks([5, 15, 25, 35, 45, 55, 65, 75, 85])
+    gnt.set_yticklabels(['Fri C', 'Fri O', 'Fri S', 'Sat C', 'Sat O', 'Sat S', 'Sun C', 'Sun O', 'Sun S'])
 
-    for x in stage1:
-        c = np.array([0, 0])
-        gnt.broken_barh([(x[3], x[2])], (30, 9),
-                        facecolor=np.append(c, (np.random.rand()+1)/2), ec='black')
-        gnt.text(x[3] + 10, 30.5, x[1], rotation='vertical',
-                 c='white', size='small')
-    for x in stage2:
-        c = np.array([0])
-        c = np.append(c, (np.random.rand()+1)/2)
-        gnt.broken_barh([(x[3], x[2])], (20, 9),
-                        facecolor=np.append(c, 0), ec='black')
-        gnt.text(x[3] + 10, 20.5, x[1], rotation='vertical',
-                 c='black', size='small')
-    for x in stage3:
-        c = np.array([0, 0])
-        gnt.broken_barh([(x[3], x[2])], (10, 9),
-                        facecolor=np.append((np.random.rand()+1)/2, c), ec='black')
-        gnt.text(x[3] + 10, 10.5, x[1], rotation='vertical',
-                 c='white', size='small')
+    for x in range(9):
+        for y in stages[x]:
+            gnt.broken_barh([(y[1], y[2])], ((((x%3)*3) + (floor(x/3)))*10, 9), ec='black')
+            gnt.text(y[1] + 1, (((x%3)*3) + (floor(x/3)))*10 + 4, y[0], c='white', size='small')
 
     plt.show()
