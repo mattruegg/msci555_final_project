@@ -31,8 +31,8 @@ def colour_map(genre):
 if __name__ == '__main__':
     artist_data = pd.read_csv('artist_data.csv')
 
-    base_changeover = 25
-    fast_changeover = 10
+    base_changeover = 20
+    fast_changeover = 5
 
     weighting = []
     num_artist = len(artist_data)
@@ -48,7 +48,9 @@ if __name__ == '__main__':
     w, h = 0, 9
     stages = [[0 for x in range(w)] for y in range(h)]
     genres = ['', '', '', '', '', '', '', '', '']
-    times = [0, 0, 0, 50, 50, 50, 50, 50, 50]
+    times = [0-base_changeover, 0-base_changeover, 0-base_changeover, 
+             50-base_changeover, 50-base_changeover, 50-base_changeover, 
+             50-base_changeover, 50-base_changeover, 50-base_changeover]
 
     #
     # -------------------------- CREATE SCHEDULE --------------------------
@@ -61,7 +63,7 @@ if __name__ == '__main__':
         next_stage = times.index(min(times))
 
         # check for prev genre, reduce weight
-        for y in range(len(choose_artist)):
+        for y in range(68):
             if y in artist_data['Artist']:
                 z = choose_artist.loc[y]
                 if z['Genre'] == genres[next_stage]:
@@ -69,12 +71,20 @@ if __name__ == '__main__':
                         z['ML'] / (z['SetLength'] + fast_changeover))
 
         # check for genre duplicate, increase weight
-        for y in range(len(choose_artist)):
+        for y in range(68):
             if y in artist_data['Artist']:
                 z = choose_artist.loc[y]
-                if (1 < (z['Genre'] == genres[next_stage % 3])
-                    + (z['Genre'] == (genres[next_stage % 3 + 3]))
-                        + (z['Genre'] == (genres[next_stage % 3 + 6]))):
+                if (next_stage <= 2 and
+                    ((z['Genre'] == (genres[next_stage + 3]))
+                     or (z['Genre'] == (genres[next_stage + 6])))):
+                    choose_artist['Weighting'].loc[y] /= 2
+                elif ((3 <= next_stage <= 5) and
+                      ((z['Genre'] == (genres[next_stage + 3]))
+                       or (z['Genre'] == (genres[next_stage - 3])))):
+                    choose_artist['Weighting'].loc[y] /= 2
+                elif ((6 <= next_stage <= 8) and
+                      ((z['Genre'] == (genres[next_stage - 3]))
+                       or (z['Genre'] == (genres[next_stage - 6])))):
                     choose_artist['Weighting'].loc[y] /= 2
 
         # choose max WCT
@@ -82,36 +92,35 @@ if __name__ == '__main__':
             for y in choose_artist['Weighting'].nlargest(11).index.tolist():
                 if choose_artist['ML'].loc[y] < 20000000:
                     next_artist = y
+                    break
         else:
             next_artist = choose_artist['Weighting'].idxmax()
 
         # update stage vars
         if (choose_artist['Genre'].loc[next_artist] == genres[next_stage]):
             stages[next_stage].append([choose_artist['Artist'].loc[next_artist],
-                                       times[next_stage]
-                                            - (base_changeover - fast_changeover),
+                                       times[next_stage] + fast_changeover,
                                        choose_artist['SetLength'].loc[next_artist],
                                        times[next_stage]
-                                            + choose_artist['SetLength'].loc[next_artist]
-                                            - (base_changeover - fast_changeover),
+                                       + choose_artist['SetLength'].loc[next_artist]
+                                       + fast_changeover,
                                        choose_artist['Genre'].loc[next_artist]])
-            times[next_stage] += choose_artist['SetLength'].loc[next_artist] \
-                + fast_changeover
+            times[next_stage] += choose_artist['SetLength'].loc[next_artist] + fast_changeover
         else:
             stages[next_stage].append([choose_artist['Artist'].loc[next_artist],
-                                       times[next_stage],
+                                       times[next_stage] + base_changeover,
                                        choose_artist['SetLength'].loc[next_artist],
-                                       times[next_stage] +
-                                       choose_artist['SetLength'].loc[next_artist],
+                                       times[next_stage]
+                                       + choose_artist['SetLength'].loc[next_artist]
+                                       + base_changeover,
                                        choose_artist['Genre'].loc[next_artist]])
-            times[next_stage] += choose_artist['SetLength'].loc[next_artist] \
-                + base_changeover
+            times[next_stage] += choose_artist['SetLength'].loc[next_artist] + base_changeover
         genres[next_stage] = choose_artist['Genre'].loc[next_artist]
 
         # remove from UA
         unscheduled_artists.drop(index=next_artist, inplace=True)
 
-    print(times)
+    # print(times)
     # for x in stages:
     #     print(x)
 
@@ -130,9 +139,12 @@ if __name__ == '__main__':
     for x in range(9):
         for y in stages[x]:
             gnt.broken_barh([(y[1], y[2])], ((
-                ((x % 3)*3) + (floor(x/3)))*10, 9), ec='black', 
+                ((x % 3)*3) + (floor(x/3)))*10, 9), ec='black',
                 facecolor=np.divide(colour_map(y[4]), 255).reshape(-1, 3))
             gnt.text(y[1] + 1, (((x % 3)*3) + (floor(x/3)))
                      * 10 + 4, y[0], c='white', size='small')
+    
+    plt.axhline(y=29.55, c='black')
+    plt.axhline(y=59.58, c='black')
 
     plt.show()
