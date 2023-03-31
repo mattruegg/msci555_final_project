@@ -27,12 +27,33 @@ def colour_map(genre):
         case 'Rock':
             return np.array([0, 170, 70])
 
+def create_graphs(times, stages):
+    fig, gnt = plt.subplots()
+    gnt.set_ylim(0, 90)
+    gnt.set_xlim(0, max(times))
+
+    gnt.set_yticks([5, 15, 25, 35, 45, 55, 65, 75, 85])
+    gnt.set_yticklabels(['Fri C', 'Fri O', 'Fri S', 'Sat C',
+                        'Sat O', 'Sat S', 'Sun C', 'Sun O', 'Sun S'])
+
+    for x in range(9):
+        for y in stages[x]:
+            gnt.broken_barh([(y[1], y[2])], ((
+                ((x % 3)*3) + (floor(x/3)))*10, 9), ec='black',
+                facecolor=np.divide(colour_map(y[4]), 255).reshape(-1, 3))
+            gnt.text(y[1] + 1, (((x % 3)*3) + (floor(x/3)))
+                     * 10 + 4, y[0], c='white', size='small')
+
+    plt.axhline(y=29.55, c='black')
+    plt.axhline(y=59.58, c='black')
+
+    plt.show()
+
 
 if __name__ == '__main__':
     artist_data = pd.read_csv('artist_data.csv')
 
-    base_changeover = 20
-    fast_changeover = 5
+    base_changeover, fast_changeover = 15, 5
 
     weighting = []
     num_artist = len(artist_data)
@@ -89,7 +110,7 @@ if __name__ == '__main__':
 
         # choose max WCT
         if next_stage >= 3:
-            for y in choose_artist['Weighting'].nlargest(11).index.tolist():
+            for y in choose_artist['Weighting'].nlargest(15).index.tolist():
                 if choose_artist['ML'].loc[y] < 20000000:
                     next_artist = y
                     break
@@ -104,7 +125,8 @@ if __name__ == '__main__':
                                        times[next_stage]
                                        + choose_artist['SetLength'].loc[next_artist]
                                        + fast_changeover,
-                                       choose_artist['Genre'].loc[next_artist]])
+                                       choose_artist['Genre'].loc[next_artist],
+                                       artist_data['NR'].loc[next_artist]])
             times[next_stage] += choose_artist['SetLength'].loc[next_artist] + fast_changeover
         else:
             stages[next_stage].append([choose_artist['Artist'].loc[next_artist],
@@ -113,38 +135,27 @@ if __name__ == '__main__':
                                        times[next_stage]
                                        + choose_artist['SetLength'].loc[next_artist]
                                        + base_changeover,
-                                       choose_artist['Genre'].loc[next_artist]])
+                                       choose_artist['Genre'].loc[next_artist],
+                                       artist_data['NR'].loc[next_artist]])
             times[next_stage] += choose_artist['SetLength'].loc[next_artist] + base_changeover
         genres[next_stage] = choose_artist['Genre'].loc[next_artist]
 
         # remove from UA
         unscheduled_artists.drop(index=next_artist, inplace=True)
 
-    # print(times)
+    print(times)
     # for x in stages:
     #     print(x)
+
+    weighted_sum = 0
+    for x in stages:
+        for y in x:
+            weighted_sum += (y[5] * y[3])
+    print(weighted_sum)
 
     #
     # -------------------------- CREATE GRAPHS --------------------------
     #
 
-    fig, gnt = plt.subplots()
-    gnt.set_ylim(0, 90)
-    gnt.set_xlim(0, max(times))
-
-    gnt.set_yticks([5, 15, 25, 35, 45, 55, 65, 75, 85])
-    gnt.set_yticklabels(['Fri C', 'Fri O', 'Fri S', 'Sat C',
-                        'Sat O', 'Sat S', 'Sun C', 'Sun O', 'Sun S'])
-
-    for x in range(9):
-        for y in stages[x]:
-            gnt.broken_barh([(y[1], y[2])], ((
-                ((x % 3)*3) + (floor(x/3)))*10, 9), ec='black',
-                facecolor=np.divide(colour_map(y[4]), 255).reshape(-1, 3))
-            gnt.text(y[1] + 1, (((x % 3)*3) + (floor(x/3)))
-                     * 10 + 4, y[0], c='white', size='small')
+    # create_graphs(times, stages)
     
-    plt.axhline(y=29.55, c='black')
-    plt.axhline(y=59.58, c='black')
-
-    plt.show()
