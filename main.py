@@ -129,10 +129,6 @@ def regular_scheulde(unscheduled_artists, base_changeover, fast_changeover):
         # remove from UA
         unscheduled_artists.drop(index=next_artist, inplace=True)
 
-    # print(times)
-    # for x in stages:
-    #     print(x)
-
     weighted_sum = 0
     for x in stages:
         for y in x:
@@ -202,10 +198,6 @@ def random_schedule(unscheduled_artists, base_changeover, fast_changeover):
 
         # remove from UA
         unscheduled_artists.drop(index=next_artist, inplace=True)
-
-    # print(times)
-    # for x in stages:
-    #     print(x)
 
     weighted_sum = 0
     for x in stages:
