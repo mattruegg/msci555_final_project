@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from math import floor
+import random
 
 pd.options.mode.chained_assignment = None
 
@@ -49,22 +50,7 @@ def create_graphs(times, stages):
 
     plt.show()
 
-
-if __name__ == '__main__':
-    artist_data = pd.read_csv('artist_data.csv')
-
-    base_changeover, fast_changeover = 15, 5
-
-    weighting = []
-    num_artist = len(artist_data)
-    for x in range(num_artist):
-        if x in artist_data['Artist']:
-            y = artist_data.loc[x]
-            weighting.append(y['ML'] / (y['SetLength'] + base_changeover))
-
-    unscheduled_artists = artist_data
-    unscheduled_artists['Weighting'] = weighting
-
+def regular_scheulde(unscheduled_artists, base_changeover, fast_changeover):
     # stage order: 1 2 3 4 5 6 7 8 9
     w, h = 0, 9
     stages = [[0 for x in range(w)] for y in range(h)]
@@ -143,7 +129,81 @@ if __name__ == '__main__':
         # remove from UA
         unscheduled_artists.drop(index=next_artist, inplace=True)
 
-    print(times)
+    # print(times)
+    # for x in stages:
+    #     print(x)
+
+    weighted_sum = 0
+    for x in stages:
+        for y in x:
+            weighted_sum += (y[5] * y[3])
+    print(weighted_sum)
+
+    #
+    # -------------------------- CREATE GRAPHS --------------------------
+    #
+
+    create_graphs(times, stages)
+
+    return
+
+def random_schedule(unscheduled_artists, base_changeover, fast_changeover):
+    # stage order: 1 2 3 4 5 6 7 8 9
+    w, h = 0, 9
+    stages = [[0 for x in range(w)] for y in range(h)]
+    genres = ['', '', '', '', '', '', '', '', '']
+    times = [0-base_changeover, 0-base_changeover, 0-base_changeover, 
+             50-base_changeover, 50-base_changeover, 50-base_changeover, 
+             50-base_changeover, 50-base_changeover, 50-base_changeover]
+
+    #
+    # -------------------------- CREATE SCHEDULE --------------------------
+    #
+
+    for x in range(num_artist):
+        choose_artist = unscheduled_artists.copy(deep=True)
+
+        # choose a stage
+        next_stage = times.index(min(times))
+        
+        width = 15
+        if next_stage >= 3:
+            z = choose_artist['Weighting'].nlargest(width).index.tolist()
+            next_artist = z[random.randint(0,len(z)-1)]
+            while(choose_artist['ML'].loc[next_artist] > 20000000):
+                print("if", z)
+                next_artist = z[random.randint(0,len(z)-1)]
+        else:
+            z = choose_artist['Weighting'].nlargest(width).index.tolist()
+            next_artist = z[random.randint(0,len(z)-1)]
+
+        # update stage vars
+        if (choose_artist['Genre'].loc[next_artist] == genres[next_stage]):
+            stages[next_stage].append([choose_artist['Artist'].loc[next_artist],
+                                       times[next_stage] + fast_changeover,
+                                       choose_artist['SetLength'].loc[next_artist],
+                                       times[next_stage]
+                                       + choose_artist['SetLength'].loc[next_artist]
+                                       + fast_changeover,
+                                       choose_artist['Genre'].loc[next_artist],
+                                       artist_data['NR'].loc[next_artist]])
+            times[next_stage] += choose_artist['SetLength'].loc[next_artist] + fast_changeover
+        else:
+            stages[next_stage].append([choose_artist['Artist'].loc[next_artist],
+                                       times[next_stage] + base_changeover,
+                                       choose_artist['SetLength'].loc[next_artist],
+                                       times[next_stage]
+                                       + choose_artist['SetLength'].loc[next_artist]
+                                       + base_changeover,
+                                       choose_artist['Genre'].loc[next_artist],
+                                       artist_data['NR'].loc[next_artist]])
+            times[next_stage] += choose_artist['SetLength'].loc[next_artist] + base_changeover
+        genres[next_stage] = choose_artist['Genre'].loc[next_artist]
+
+        # remove from UA
+        unscheduled_artists.drop(index=next_artist, inplace=True)
+
+    # print(times)
     # for x in stages:
     #     print(x)
 
@@ -158,4 +218,23 @@ if __name__ == '__main__':
     #
 
     # create_graphs(times, stages)
-    
+
+    return
+
+if __name__ == '__main__':
+    artist_data = pd.read_csv('artist_data.csv')
+
+    base_changeover, fast_changeover = 20, 5
+
+    weighting = []
+    num_artist = len(artist_data)
+    for x in range(num_artist):
+        if x in artist_data['Artist']:
+            y = artist_data.loc[x]
+            weighting.append(y['ML'] / (y['SetLength'] + base_changeover))
+
+    unscheduled_artists = artist_data
+    unscheduled_artists['Weighting'] = weighting
+
+    regular_scheulde(unscheduled_artists, base_changeover, fast_changeover)
+    # random_schedule(unscheduled_artists, base_changeover, fast_changeover)
